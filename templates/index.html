@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Search</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">AI-Powered Search</h1>
+                <p class="text-gray-600">Powered by Tavily Search and Mistral AI</p>
+            </div>
+            
+            <!-- Search Form -->
+            <div class="mb-8">
+                <div class="flex gap-4">
+                    <input type="text" id="searchInput" 
+                           class="flex-1 p-4 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
+                           placeholder="Enter your question...">
+                    <button onclick="performSearch()" 
+                            class="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2">
+                        <i class="fas fa-search"></i>
+                        Search
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div id="loading" class="hidden">
+                <div class="flex items-center justify-center p-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+                </div>
+            </div>
+
+            <!-- Results Container -->
+            <div class="space-y-8">
+                <!-- AI Analysis -->
+                <div id="mistralResponse" class="hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                            <i class="fas fa-robot text-blue-500"></i>
+                            AI Analysis
+                        </h2>
+                        <div class="prose max-w-none text-gray-700 leading-relaxed"></div>
+                    </div>
+                </div>
+
+                <!-- Search Results -->
+                <div id="searchResults" class="hidden">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-search text-blue-500"></i>
+                        Source References
+                    </h2>
+                    <div class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value;
+            if (!query.trim()) return;
+
+            // Show loading, hide results
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('mistralResponse').classList.add('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await response.json();
+
+                // Format and display AI analysis
+                const mistralDiv = document.getElementById('mistralResponse');
+                mistralDiv.classList.remove('hidden');
+                const formattedResponse = data.processed_response
+                    .split('\n')
+                    .map(para => para.trim())
+                    .filter(para => para.length > 0)
+                    .map(para => `<p>${para}</p>`)
+                    .join('');
+                mistralDiv.querySelector('.prose').innerHTML = formattedResponse;
+
+                // Display search results
+                const resultsDiv = document.getElementById('searchResults');
+                resultsDiv.classList.remove('hidden');
+                const resultsContainer = resultsDiv.querySelector('div');
+                resultsContainer.innerHTML = data.search_results.map((result, index) => `
+                    <div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+                        <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mb-2">Source ${index + 1}</span>
+                        <h3 class="text-lg font-medium text-gray-800 mb-2">
+                            <a href="${result.url}" class="hover:text-blue-600 hover:underline" target="_blank">
+                                ${result.name}
+                            </a>
+                        </h3>
+                        <p class="text-gray-600">${result.snippet}</p>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while searching. Please try again.');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        // Allow search on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    </script>
+</body>
+</html>
